@@ -24,7 +24,7 @@ import {
   fract,
   mx_cell_noise_float,
 } from "three/tsl";
-import { cosineGradientColour } from "./tsl";
+import { cosineGradientColour } from "@/utils/tsl";
 import { positionLocal } from "three/src/nodes/TSL.js";
 
 const EnvironmentSphereGradients: FC = () => {

@@ -43,6 +43,7 @@ const SpriteEmitter: FC = () => {
       amplitude: { value: 0.5, min: 0, max: 2 },
       friction: { value: 0.01, min: 0, max: 0.1, step: 0.01 },
     });
+
   const {
     key,
     positionNode,

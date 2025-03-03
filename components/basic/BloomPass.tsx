@@ -49,7 +49,7 @@ export const BloomPass: FC<Props> = ({}) => {
     // const scenePassEmissive = scenePass.getTextureNode("emissive");
 
     // Create bloom pass
-    const bloomPass = bloom(scenePassColor, 0.2);
+    const bloomPass = bloom(scenePassColor, 0.3);
 
     processing.outputNode = scenePassColor.add(bloomPass);
     postProcessing.current = processing;
