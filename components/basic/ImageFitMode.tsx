@@ -2,7 +2,7 @@
 import { Plane, useTexture } from "@react-three/drei";
 import { useControls } from "leva";
 import React, { type FC, useMemo } from "react";
-import { Vector2 } from "three";
+import { RepeatWrapping, SRGBColorSpace, Vector2 } from "three";
 import {
   color,
   mix,
@@ -17,6 +17,7 @@ import {
   step,
   Fn,
 } from "three/tsl";
+import carouselImage from "@/assets/images/carousel.jpg";
 
 enum FitMode {
   Cover = "Cover",
@@ -26,11 +27,13 @@ enum FitMode {
 }
 
 const ImageFitMode: FC = () => {
-  const texture1 = useTexture(
-    "https://images.pexels.com/photos/30886959/pexels-photo-30886959/free-photo-of-traditional-japanese-shrine-with-stone-guardian.jpeg"
-  );
+  // Photo by Dimitry Mak: https://www.pexels.com/photo/colorful-summer-day-at-coney-island-amusement-park-30911091/
+  const imageTexture = useTexture(carouselImage.src);
+  imageTexture.colorSpace = SRGBColorSpace;
+  imageTexture.wrapS = RepeatWrapping;
+  imageTexture.wrapT = RepeatWrapping;
 
-  const { planeWidth, planeHeight, fit } = useControls({
+  const { planeWidth, planeHeight, fit, tileAmount } = useControls({
     fit: {
       value: FitMode.Cover,
       options: Object.values(FitMode),
@@ -47,12 +50,18 @@ const ImageFitMode: FC = () => {
       max: 5,
       step: 0.1,
     },
+    tileAmount: {
+      value: 2,
+      min: 1,
+      max: 16,
+      step: 1,
+      render: (get) => get("fit") === FitMode.Tile,
+    },
     // If tile mode, set the scale
   });
 
-  const srcAspect: number = 661 / 992;
+  const imageAspect = imageTexture.image.width / imageTexture.image.height;
   const planeAspect: number = planeWidth / planeHeight;
-  const tileScale = 2;
 
   // https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit#values
 
@@ -73,85 +82,101 @@ const ImageFitMode: FC = () => {
     // we shrink the horizontal or vertical UV range and center it.
     const getCoverColor = Fn(([uv]) => {
       const coverUv =
-        planeAspect > srcAspect
+        planeAspect > imageAspect
           ? // Plane is wider than image: image’s full width is used, scale the height.
             vec2(
               uv.x,
               uv.y
                 .sub(0.5)
-                .mul(srcAspect / planeAspect)
+                .mul(imageAspect / planeAspect)
                 .add(0.5)
             )
           : // Plane is taller than image: image’s full height is used, scale the width.
             vec2(
               uv.x
                 .sub(0.5)
-                .mul(planeAspect / srcAspect)
+                .mul(planeAspect / imageAspect)
                 .add(0.5),
               uv.y
             );
 
-      return texture(texture1, coverUv);
+      return texture(imageTexture, coverUv);
     });
 
     // In CONTAIN mode we need to show the entire image.
     // The valid region in UV space is smaller than [0,1] on one axis.
     // Outside that region, we mask to black.
-    const getContainColor = Fn(([uv]) => {
+
+    const getContainUV = Fn(([uv, scale = 1]) => {
       // Compute the adjusted UV coordinates that map [0,1] into the valid image area.
       const containUv =
-        planeAspect > srcAspect
-          ? // Plane is wider than image: full width is used; adjust height.
-            vec2(
+        planeAspect > imageAspect
+          ? vec2(
               uv.x
                 .sub(0.5)
-                .div(srcAspect / planeAspect)
+                .div(imageAspect / planeAspect)
                 .add(0.5),
               uv.y
             )
-          : // Otherwise: full height is used; adjust width.
-            vec2(
+              .mul(scale)
+              .toVar()
+          : vec2(
               uv.x,
               uv.y
                 .sub(0.5)
-                .div(planeAspect / srcAspect)
+                .div(planeAspect / imageAspect)
                 .add(0.5)
-            );
-      // Sample the texture with the adjusted UV.
-      const sampled = texture(texture1, containUv);
+            )
+              .mul(scale)
+              .toVar();
+
+      return containUv;
+    }).setLayout({
+      name: "getContainUV",
+      type: "vec2",
+      inputs: [
+        { name: "uv", type: "vec2", qualifier: "in" },
+        { name: "scale", type: "float", qualifier: "in" },
+      ],
+    });
+
+    const getContainColor = Fn(([uv]) => {
+      // Compute the adjusted UV coordinates that map [0,1] into the valid image area
+      const containUv = getContainUV(uv);
+      // Sample the texture with the adjusted UV
+      const sampled = texture(imageTexture, containUv);
 
       const maskColor = color("#fff");
       const mask =
-        planeAspect > srcAspect
-          ? step(0.5 - (srcAspect / planeAspect) * 0.5, uv.x).mul(
-              step(0.5 + (srcAspect / planeAspect) * 0.5, uv.x).oneMinus()
+        planeAspect > imageAspect
+          ? step(0.5 - (imageAspect / planeAspect) * 0.5, uv.x).mul(
+              step(0.5 + (imageAspect / planeAspect) * 0.5, uv.x).oneMinus()
             )
-          : step(0.5 - (planeAspect / srcAspect) * 0.5, uv.y).mul(
-              step(0.5 + (planeAspect / srcAspect) * 0.5, uv.y).oneMinus()
+          : step(0.5 - (planeAspect / imageAspect) * 0.5, uv.y).mul(
+              step(0.5 + (planeAspect / imageAspect) * 0.5, uv.y).oneMinus()
             );
       // Where mask==0, the maskColor is used
       return mix(maskColor, sampled, mask);
     });
 
-    // TODO: finish this.
     const getTileColor = Fn(([uv]) => {
-      const tileUv = fract(uv.mul(tileScale));
-      return texture(texture1, tileUv);
+      const tileUv = getContainUV(uv, tileAmount);
+      return texture(imageTexture, tileUv);
     });
 
     const getColorNode = Fn(() => {
       if (fit === FitMode.Cover) return getCoverColor(uv());
       if (fit === FitMode.Contain) return getContainColor(uv());
-      // For fill, we use the uv coordinates as-is, stretching the image.
-      if (fit === FitMode.Fill) return texture(texture1, uv());
       if (fit === FitMode.Tile) return getTileColor(uv());
+      // For fill, we use the uv coordinates as-is, stretching the image.
+      if (fit === FitMode.Fill) return texture(imageTexture, uv());
     });
 
     const colorNode = getColorNode();
     const key = colorNode.uuid;
 
     return { key, colorNode };
-  }, [fit, planeAspect, srcAspect, texture1]);
+  }, [planeAspect, imageAspect, imageTexture, tileAmount, fit]);
 
   return (
     <Plane position={[0, 0, 0]} args={[planeWidth, planeHeight]}>

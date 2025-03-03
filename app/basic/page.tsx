@@ -3,24 +3,24 @@ import { BloomPass } from "@/components/basic/BloomPass";
 import WebGPUCanvas from "@/components/WebGPUCanvas";
 import { SimpleSphere } from "@/components/basic/SimpleSphere";
 import EnvironmentSphereGradients from "@/components/basic/EnvironmentGradients";
-import BackgroundNodeShader from "@/components/basic/BackgroundNodeShader";
+import ImageFitMode from "@/components/basic/ImageFitMode";
 
 export default function Home() {
   return (
-    <div>
+    <main>
       <WebGPUCanvas>
-        <ambientLight intensity={2} />
-        <pointLight intensity={6} position={[-1, 1.5, 1]} />
-        <pointLight intensity={2} position={[1, 0, 1]} />
+        <ambientLight intensity={1} />
+        <pointLight intensity={3} position={[-1, 0.5, 1]} />
+        <pointLight intensity={3} position={[1, 0.5, 1]} />
 
-        <BackgroundNodeShader />
-        {/* <EnvironmentGrainSphere /> */}
-        {/* <EnvironmentSphereGradients /> */}
         <SimpleSphere />
 
-        {/* TODO: background node shdaer... */}
-        <BloomPass />
+        {/* <ImageFitMode /> */}
+        {/* <EnvironmentGrainSphere /> */}
+        {/* <EnvironmentSphereGradients /> */}
+
+        {/* <BloomPass /> */}
       </WebGPUCanvas>
-    </div>
+    </main>
   );
 }

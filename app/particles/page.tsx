@@ -4,11 +4,10 @@ import WebGPUCanvas from "@/components/WebGPUCanvas";
 
 export default function Home() {
   return (
-    <div>
+    <main>
       <WebGPUCanvas>
-        <ScreenQuadTSL />
         <SpriteEmitter />
       </WebGPUCanvas>
-    </div>
+    </main>
   );
 }
