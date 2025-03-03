@@ -3,7 +3,7 @@ import { Sphere } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import React, { type FC, useMemo, useState } from "react";
 import { MathUtils } from "three";
-import { color, mix, uv, positionWorld, uniform, vec3 } from "three/tsl";
+import { color, mix, positionWorld, uniform, uv, vec3 } from "three/tsl";
 
 // Basic component showing how to add smooth hover interactivity with TSL
 
