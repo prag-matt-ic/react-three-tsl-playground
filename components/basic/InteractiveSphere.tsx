@@ -15,8 +15,8 @@ const InteractiveSphere: FC = () => {
     const uHovered = uniform(0.0);
 
     // Create color gradients on the Y axis (bottom to top of the sphere)
-    const defaultColor = mix(color("#3F4A4B"), color("#7A8B8C"), uv().y.abs());
-    const hoverColor = mix(color("#14DCE9"), color("#B462D1"), uv().y.abs());
+    const defaultColor = mix(color("#3F4A4B"), color("#7A8B8C"), uv().y);
+    const hoverColor = mix(color("#14DCE9"), color("#B462D1"), uv().y);
 
     // Mix between two default and hovered colors based on the hover value
     const colorNode = mix(defaultColor, hoverColor, uHovered);
