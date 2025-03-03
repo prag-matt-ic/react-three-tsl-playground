@@ -1,7 +1,7 @@
 "use client";
 import { BloomPass } from "@/components/basic/BloomPass";
-import WebGPUCanvas from "@/components/WebGPUCanvas";
 import InteractiveSphere from "@/components/basic/InteractiveSphere";
+import WebGPUCanvas from "@/components/WebGPUCanvas";
 
 export default function BasicInteractiveSpherePage() {
   return (

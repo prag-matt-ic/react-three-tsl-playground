@@ -4,28 +4,29 @@ import { COSINE_GRADIENTS } from "@thi.ng/color";
 import React, { type FC, useMemo } from "react";
 import { BackSide, Vector3 } from "three";
 import MathNode from "three/src/nodes/math/MathNode.js";
+import { positionLocal } from "three/src/nodes/TSL.js";
 import {
+  abs,
+  clamp,
   color,
-  mix,
-  mx_noise_float,
-  positionWorld,
-  time,
-  mx_fractal_noise_float,
-  positionGeometry,
+  float,
+  Fn,
+  fract,
   Loop,
+  mix,
+  mx_cell_noise_float,
+  mx_fractal_noise_float,
+  mx_noise_float,
+  positionGeometry,
+  positionWorld,
+  ShaderNodeObject,
+  time,
+  uv,
   vec2,
   vec3,
-  uv,
-  Fn,
-  ShaderNodeObject,
-  float,
-  clamp,
-  abs,
-  fract,
-  mx_cell_noise_float,
 } from "three/tsl";
+
 import { cosineGradientColour } from "@/utils/tsl";
-import { positionLocal } from "three/src/nodes/TSL.js";
 
 const EnvironmentSphereGradients: FC = () => {
   const { key, colorNode } = useMemo(() => {

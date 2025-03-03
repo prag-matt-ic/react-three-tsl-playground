@@ -2,25 +2,26 @@
 import { Box, useTexture } from "@react-three/drei";
 import { useControls } from "leva";
 import React, { type FC, useMemo } from "react";
+import { SRGBColorSpace } from "three";
 import {
-  uniform,
-  vec2,
-  texture,
-  uv,
-  blendOverlay,
-  blendScreen,
   blendBurn,
   blendColor,
   blendDodge,
-  smoothstep,
+  blendOverlay,
+  blendScreen,
   Fn,
-  ShaderNodeObject,
   mix,
+  ShaderNodeObject,
+  smoothstep,
+  texture,
+  uniform,
+  uv,
+  vec2,
 } from "three/tsl";
-import snowImage from "@/assets/images/snow.jpg";
-import beachImage from "@/assets/images/beach.jpg";
-import { SRGBColorSpace } from "three";
 import { TextureNode, UniformNode } from "three/webgpu";
+
+import beachImage from "@/assets/images/beach.jpg";
+import snowImage from "@/assets/images/snow.jpg";
 
 enum BlendMode {
   None = "none",

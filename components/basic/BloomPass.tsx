@@ -4,20 +4,18 @@ import gsap from "gsap";
 import React, { type FC, useEffect, useMemo, useRef, useState } from "react";
 import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
 import {
-  output,
-  transformedNormalView,
-  metalness,
   blendColor,
   depth,
   emissive,
-  pass,
+  metalness,
   mrt,
+  output,
+  pass,
+  transformedNormalView,
 } from "three/tsl";
 import { PostProcessing, WebGPURenderer } from "three/webgpu";
 
-type Props = {};
-
-export const BloomPass: FC<Props> = ({}) => {
+export const BloomPass: FC = () => {
   const camera = useThree((s) => s.camera);
   const scene = useThree((s) => s.scene);
   const renderer = useThree((s) => s.gl);

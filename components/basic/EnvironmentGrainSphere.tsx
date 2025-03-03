@@ -4,13 +4,13 @@ import React, { type FC, useMemo } from "react";
 import { BackSide } from "three";
 import {
   color,
+  Fn,
   mix,
   mx_noise_float,
   positionWorld,
+  type ShaderNodeObject,
   time,
   uv,
-  Fn,
-  type ShaderNodeObject,
 } from "three/tsl";
 import { Node, VarNode } from "three/webgpu";
 

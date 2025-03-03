@@ -4,19 +4,20 @@ import { useControls } from "leva";
 import React, { type FC, useMemo } from "react";
 import { RepeatWrapping, SRGBColorSpace, Vector2 } from "three";
 import {
+  clamp,
   color,
+  Fn,
+  fract,
   mix,
   positionWorld,
-  clamp,
-  uniform,
-  vec3,
-  vec2,
-  texture,
-  uv,
-  fract,
   step,
-  Fn,
+  texture,
+  uniform,
+  uv,
+  vec2,
+  vec3,
 } from "three/tsl";
+
 import carouselImage from "@/assets/images/carousel.jpg";
 
 enum FitMode {

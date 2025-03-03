@@ -1,35 +1,35 @@
 "use client";
-import React, { useLayoutEffect, useMemo, useRef, type FC } from "react";
-import * as THREE from "three/webgpu";
+import { useFrame, useThree } from "@react-three/fiber";
+import { useControls } from "leva";
+import React, { type FC, useLayoutEffect, useMemo, useRef } from "react";
+import { smoothstep } from "three/src/nodes/TSL.js";
 import {
   atan,
-  cos,
-  PI,
-  PI2,
-  sin,
-  vec3,
+  Break,
   color,
+  cos,
+  deltaTime,
+  exp2,
+  float,
   Fn,
   hash,
   If,
-  exp2,
   instanceIndex,
-  storage,
-  deltaTime,
-  uniform,
-  mx_fractal_noise_vec3,
   mix,
-  float,
-  Break,
-  uv,
-  vec4,
-  vec2,
+  mx_fractal_noise_vec3,
   oneMinus,
+  PI,
+  PI2,
   pow,
+  sin,
+  storage,
+  uniform,
+  uv,
+  vec2,
+  vec3,
+  vec4,
 } from "three/tsl";
-import { useFrame, useThree } from "@react-three/fiber";
-import { useControls } from "leva";
-import { smoothstep } from "three/src/nodes/TSL.js";
+import * as THREE from "three/webgpu";
 
 const SpriteEmitter: FC = () => {
   const particleCount = Math.pow(2, 10);
