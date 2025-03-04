@@ -77,15 +77,15 @@ const ImageBlending: FC = () => {
         colB: ShaderNodeObject<TextureNode>
       ]) => {
         switch (mode.value) {
-          case "overlay":
+          case BlendMode.Overlay:
             return blendOverlay(colA, colB);
-          case "screen":
+          case BlendMode.Screen:
             return blendScreen(colA, colB);
-          case "burn":
+          case BlendMode.Burn:
             return blendBurn(colA, colB);
-          case "color":
+          case BlendMode.Color:
             return blendColor(colA, colB);
-          case "dodge":
+          case BlendMode.Dodge:
             return blendDodge(colA, colB);
           default: // "none"
             return mix(colA, colB, 0.5);

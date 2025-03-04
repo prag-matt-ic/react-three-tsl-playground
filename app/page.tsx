@@ -1,15 +1,15 @@
-import EnvironmentGrainSphere from "@/components/basic/EnvironmentGrainSphere";
 import { BloomPass } from "@/components/basic/BloomPass";
+import EnvironmentGrainSphere from "@/components/basic/EnvironmentGrainSphere";
+import ImageBlending from "@/components/basic/images/ImageBlending";
+import ImageFitMode from "@/components/basic/images/ImageFitMode";
 import WebGPUCanvas from "@/components/WebGPUCanvas";
-import ImageFitMode from "@/components/basic/ImageFitMode";
-import ImageBlending from "@/components/basic/ImageBlending";
 
 export default function Home() {
   return (
     <div>
       <WebGPUCanvas>
-        {/* <ImageFitMode /> */}
-        <ImageBlending />
+        <ImageFitMode />
+        {/* <ImageBlending /> */}
         {/* <WebGPUPostProcessing /> */}
       </WebGPUCanvas>
     </div>

@@ -65,15 +65,3 @@ const InteractiveSphere: FC = () => {
 };
 
 export default InteractiveSphere;
-
-// GSAP for easing control
-// useGSAP(
-//   () => {
-//     gsap.to(uHovered, {
-//       value: isPointerOver ? 1.0 : 0.0,
-//       duration: 0.8,
-//       ease: "back.out(3.0)",
-//     });
-//   },
-//   { dependencies: [isPointerOver, uHovered] }
-// );

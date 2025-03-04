@@ -2,23 +2,35 @@
 import { Plane, useTexture } from "@react-three/drei";
 import { useControls } from "leva";
 import React, { type FC, useMemo } from "react";
-import { RepeatWrapping, SRGBColorSpace, Vector2 } from "three";
+import { RepeatWrapping, SRGBColorSpace } from "three";
 import {
-  clamp,
   color,
   Fn,
-  fract,
   mix,
-  positionWorld,
+  ShaderNodeObject,
   step,
   texture,
-  uniform,
   uv,
   vec2,
-  vec3,
 } from "three/tsl";
+import { AttributeNode } from "three/webgpu";
 
 import carouselImage from "@/assets/images/carousel.jpg";
+
+// Replicates the CSS object-fit property using TSL color nodes.
+
+// https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit#values
+
+// COVER:
+// Scaled to maintain its aspect ratio while filling the element's entire content box.
+
+// CONTAIN:
+// Scaled to maintain its aspect ratio while fitting within the element's content box.
+// The object will be "letterboxed" or "pillarboxed" if its aspect ratio does not match the aspect ratio of the box.
+
+// FILL:
+// The entire object will completely fill the box.
+// If the object's aspect ratio does not match the aspect ratio of its box, the object will be stretched to fit.
 
 enum FitMode {
   Cover = "Cover",
@@ -64,24 +76,11 @@ const ImageFitMode: FC = () => {
   const imageAspect = imageTexture.image.width / imageTexture.image.height;
   const planeAspect: number = planeWidth / planeHeight;
 
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit#values
-
-  // COVER:
-  // Scaled to maintain its aspect ratio while filling the element's entire content box.
-
-  // CONTAIN:
-  // Scaled to maintain its aspect ratio while fitting within the element's content box.
-  // The object will be "letterboxed" or "pillarboxed" if its aspect ratio does not match the aspect ratio of the box.
-
-  // FILL:
-  // The entire object will completely fill the box.
-  // If the object's aspect ratio does not match the aspect ratio of its box, the object will be stretched to fit.
-
   const { key, colorNode } = useMemo(() => {
     // For cover, we want to “zoom” into the image so that the plane is completely covered.
     // Depending on whether the plane is wider than the image or not,
     // we shrink the horizontal or vertical UV range and center it.
-    const getCoverColor = Fn(([uv]) => {
+    const getCoverColor = Fn(([uv]: [ShaderNodeObject<AttributeNode>]) => {
       const coverUv =
         planeAspect > imageAspect
           ? // Plane is wider than image: image’s full width is used, scale the height.
@@ -108,31 +107,33 @@ const ImageFitMode: FC = () => {
     // The valid region in UV space is smaller than [0,1] on one axis.
     // Outside that region, we mask to black.
 
-    const getContainUV = Fn(([uv, scale = 1]) => {
-      // Compute the adjusted UV coordinates that map [0,1] into the valid image area.
-      const containUv =
-        planeAspect > imageAspect
-          ? vec2(
-              uv.x
-                .sub(0.5)
-                .div(imageAspect / planeAspect)
-                .add(0.5),
-              uv.y
-            )
-              .mul(scale)
-              .toVar()
-          : vec2(
-              uv.x,
-              uv.y
-                .sub(0.5)
-                .div(planeAspect / imageAspect)
-                .add(0.5)
-            )
-              .mul(scale)
-              .toVar();
+    const getContainUV = Fn(
+      ([uv, scale = 1]: [ShaderNodeObject<AttributeNode>, number?]) => {
+        // Compute the adjusted UV coordinates that map [0,1] into the valid image area.
+        const containUv =
+          planeAspect > imageAspect
+            ? vec2(
+                uv.x
+                  .sub(0.5)
+                  .div(imageAspect / planeAspect)
+                  .add(0.5),
+                uv.y
+              )
+                .mul(scale)
+                .toVar()
+            : vec2(
+                uv.x,
+                uv.y
+                  .sub(0.5)
+                  .div(planeAspect / imageAspect)
+                  .add(0.5)
+              )
+                .mul(scale)
+                .toVar();
 
-      return containUv;
-    }).setLayout({
+        return containUv;
+      }
+    ).setLayout({
       name: "getContainUV",
       type: "vec2",
       inputs: [
@@ -141,7 +142,7 @@ const ImageFitMode: FC = () => {
       ],
     });
 
-    const getContainColor = Fn(([uv]) => {
+    const getContainColor = Fn(([uv]: [ShaderNodeObject<AttributeNode>]) => {
       // Compute the adjusted UV coordinates that map [0,1] into the valid image area
       const containUv = getContainUV(uv);
       // Sample the texture with the adjusted UV
@@ -160,7 +161,7 @@ const ImageFitMode: FC = () => {
       return mix(maskColor, sampled, mask);
     });
 
-    const getTileColor = Fn(([uv]) => {
+    const getTileColor = Fn(([uv]: [ShaderNodeObject<AttributeNode>]) => {
       const tileUv = getContainUV(uv, tileAmount);
       return texture(imageTexture, tileUv);
     });
