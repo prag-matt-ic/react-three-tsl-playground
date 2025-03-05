@@ -1,4 +1,12 @@
-import { vec3, float, mul, cos, clamp, Fn, ShaderNodeObject } from "three/tsl";
+import {
+  clamp,
+  cos,
+  float,
+  Fn,
+  mul,
+  type ShaderNodeObject,
+  vec3,
+} from "three/tsl";
 import { Node } from "three/webgpu";
 
 export const cosineGradientColour = /*#__PURE__*/ Fn(
