@@ -163,11 +163,11 @@ const SpriteEmitter: FC = () => {
         const rx = sin(rTheta).mul(cos(rPhi));
         const ry = sin(rTheta).mul(sin(rPhi));
         const rz = cos(rTheta);
-        const rDir = vec3(rx, ry, rz);
+        const rDir = vec3(rx, ry, rz).mul(5.0);
 
         // Spawn at the origin and give an outward velocity.
         pos.assign(vec3(0.0));
-        vel.assign(rDir.mul(5.0));
+        vel.assign(rDir);
       });
     })().compute(uSpawnCount.value);
 
