@@ -1,7 +1,7 @@
 "use client";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "leva";
-import React, { type FC, useLayoutEffect, useMemo, useRef } from "react";
+import React, { type FC, useMemo } from "react";
 import { smoothstep } from "three/src/nodes/TSL.js";
 import {
   atan,
@@ -105,12 +105,6 @@ const SpriteEmitter: FC = () => {
       // Invert the gradient so that the center is 1.0 (fully opaque) and the edge is 0.0,
       // then use pow() to accentuate the falloff (2.0 is an example exponent).
       const life = particlePositions.toAttribute().w;
-      // // life starts at 1 and reduces to 0
-      // const fadeLife = life.oneMinus().abs();
-      // //  float tunnelFactor = smoothstep(0.0, 0.1, flow) * (1.0 - smoothstep(0.9, 1.0, flow));
-      // const lifeFadedIn = smoothstep(0.1, 0.3, fadeLife).mul(
-      //   smoothstep(0.8, 1.0, fadeLife).oneMinus()
-      // );
       const alpha = circle.mul(life);
 
       const dark = color("#626463").rgb;
@@ -261,17 +255,8 @@ const SpriteEmitter: FC = () => {
     renderer.compute(spawnParticles);
   });
 
-  const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
-
-  useLayoutEffect(() => {
-    if (!instancedMeshRef.current) return;
-    // Ensure the instance matrix updates dynamically.
-    instancedMeshRef.current.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  }, []);
-
   return (
     <instancedMesh
-      ref={instancedMeshRef}
       args={[undefined, undefined, particleCount]}
       frustumCulled={false}
     >

@@ -1,233 +1,215 @@
-// "use client";
-// import { useFrame, useThree } from "@react-three/fiber";
-// import { useControls } from "leva";
-// import React, { type FC, useLayoutEffect, useMemo, useRef } from "react";
-// import { smoothstep } from "three/src/nodes/TSL.js";
-// import {
-//   atan,
-//   color,
-//   cos,
-//   deltaTime,
-//   Fn,
-//   hash,
-//   If,
-//   instanceIndex,
-//   mix,
-//   mx_fractal_noise_vec3,
-//   oneMinus,
-//   PI,
-//   PI2,
-//   positionLocal,
-//   positionWorld,
-//   pow,
-//   sin,
-//   storage,
-//   uniform,
-//   uv,
-//   vec2,
-//   vec3,
-//   vec4,
-// } from "three/tsl";
-// import * as THREE from "three/webgpu";
+"use client";
+import { useFrame, useThree } from "@react-three/fiber";
 
-// const PS5Loading: FC = () => {
-//   const particleCount = Math.pow(64, 2);
-//   const renderer = useThree((s) => s.gl) as unknown as THREE.WebGPURenderer;
+import { useControls } from "leva";
+import React, { type FC, useLayoutEffect, useMemo } from "react";
+import { mx_noise_vec3, smoothstep } from "three/src/nodes/TSL.js";
+import {
+  array,
+  atan,
+  color,
+  cos,
+  deltaTime,
+  float,
+  Fn,
+  hash,
+  If,
+  instancedArray,
+  instanceIndex,
+  mix,
+  mx_fractal_noise_vec3,
+  mx_noise_float,
+  PI,
+  PI2,
+  positionLocal,
+  positionWorld,
+  select,
+  sin,
+  storage,
+  uniform,
+  uv,
+  vec2,
+  vec3,
+  vec4,
+} from "three/tsl";
+import * as THREE from "three/webgpu";
 
-//   const {
-//     key,
-//     positionNode,
-//     colorNode,
-//     rotationNode,
-//     // opacityNode,
-//     updateParticles,
-//     spawnParticles,
-//   } = useMemo(() => {
-//     // Turbulence parameters that you can tweak.
-//     const noiseFrequency = uniform(frequency);
-//     const noiseAmplitude = uniform(amplitude);
-//     const noiseOctaves = uniform(octaves);
-//     const noiseLacunarity = uniform(lacunarity);
-//     const noiseDiminish = uniform(diminish);
-//     const noiseFriction = uniform(friction);
+import { colorsFromRange, css } from "@thi.ng/color";
 
-//     // Create storage buffers for positions (w holds lifetime) and velocities.
-//     const particlePositions = storage(
-//       new THREE.StorageInstancedBufferAttribute(particleCount, 4),
-//       "vec4",
-//       particleCount
-//     );
-//     const particleVelocities = storage(
-//       new THREE.StorageInstancedBufferAttribute(particleCount, 4),
-//       "vec4",
-//       particleCount
-//     );
+// Work on re-creating the PS5 Loading screen: https://www.youtube.com/watch?v=bMxgJbCgPQQ
 
-//     // Initialize particles offscreen and mark them as dead (lifetime < 0).
-//     renderer.computeAsync(
-//       Fn(() => {
-//         particlePositions.element(instanceIndex).xyz.assign(vec3(10000.0));
-//         particlePositions.element(instanceIndex).w.assign(vec3(-1.0));
-//       })().compute(particleCount)
-//     );
+const colourCount = 100;
 
-//     // Nodes for sprite node material
-//     const positionNode = particlePositions.toAttribute();
-//     const rotationNode = atan(
-//       particleVelocities.toAttribute().y,
-//       particleVelocities.toAttribute().x
-//     );
+const rangeColors = [
+  ...colorsFromRange("neutral", {
+    base: "sienna",
+    num: 20,
+    variance: 0.01,
+  }),
+  ...colorsFromRange("neutral", {
+    base: "tan",
+    num: 48,
+    variance: 0.02,
+  }),
+  ...colorsFromRange("soft", {
+    base: "darkgrey",
+    num: 30,
+    variance: 0.02,
+  }),
+  ...colorsFromRange("cool", {
+    base: "white",
+    num: 2,
+    variance: 0.01,
+  }),
+];
 
-//     const colorNode = Fn(() => {
-//       // Compute the distance from the center of the UV (0.5, 0.5)
-//       const centeredUv = uv().distance(vec2(0.5)).toVar();
-//       const zAbs = positionWorld.z.abs();
-//       const circle = smoothstep(
-//         // Blurs the circle based on distance from 0
-//         smoothstep(0.5, 0.0, zAbs).mul(0.5),
-//         0.5,
-//         centeredUv
-//       ).oneMinus();
-//       // Invert the gradient so that the center is 1.0 (fully opaque) and the edge is 0.0,
-//       // then use pow() to accentuate the falloff (2.0 is an example exponent).
-//       const life = particlePositions.toAttribute().w;
-//       // // life starts at 1 and reduces to 0
-//       // const fadeLife = life.oneMinus().abs();
-//       // //  float tunnelFactor = smoothstep(0.0, 0.1, flow) * (1.0 - smoothstep(0.9, 1.0, flow));
-//       // const lifeFadedIn = smoothstep(0.1, 0.3, fadeLife).mul(
-//       //   smoothstep(0.8, 1.0, fadeLife).oneMinus()
-//       // );
-//       const alpha = circle.mul(life);
+const colors = array(rangeColors.map((c) => color(css(c))));
 
-//       const dark = color("#626463").rgb;
-//       const light = color("#fff").rgb;
-//       const finalColor = mix(dark, light, life);
+const particleCount = Math.pow(40, 2);
 
-//       return vec4(finalColor, alpha);
-//     })();
+const PS5Loading: FC = () => {
+  const renderer = useThree((s) => s.gl) as unknown as THREE.WebGPURenderer;
 
-//     const key = colorNode.uuid;
+  const { key, positionNode, colorNode, scaleNode, updateParticles } =
+    useMemo(() => {
+      // Create storage buffers for positions (w holds random seed) and velocities.
+      const positionBuffer = instancedArray(particleCount, "vec3");
+      const velocityBuffer = instancedArray(particleCount, "vec3");
+      const colorBuffer = instancedArray(particleCount, "vec3");
 
-//     // const opacityNode = particlePositions.toAttribute().w;
+      // Initialize particle positions
+      const xSpacing = 0.01;
+      const waveLength = particleCount * xSpacing;
+      const xOffset = waveLength / 2;
+      const zRange = 12;
 
-//     // Update function: move alive particles and decrease their lifetime.
-//     const updateParticles = Fn(() => {
-//       const pos = particlePositions.element(instanceIndex).xyz;
-//       const life = particlePositions.element(instanceIndex).w;
-//       const vel = particleVelocities.element(instanceIndex).xyz;
-//       const dt = deltaTime.mul(0.1);
+      const computeInit = Fn(() => {
+        const position = positionBuffer.element(instanceIndex);
+        // Use the instanceIndex to compute a parameter "t"
+        // Multiply by a spacing factor (0.1 here) to spread out the points
+        const t = float(instanceIndex.add(3)).mul(xSpacing);
 
-//       If(life.greaterThan(0.0), () => {
-//         // Apply turbulence field using fractal noise.
-//         const localVel = mx_fractal_noise_vec3(
-//           pos.mul(noiseFrequency),
-//           noiseOctaves,
-//           noiseLacunarity,
-//           noiseDiminish,
-//           noiseAmplitude
-//         ).mul(life.add(0.02));
-//         // Update velocity with turbulence.
-//         vel.addAssign(localVel);
-//         // Apply friction to the velocity.
-//         vel.mulAssign(noiseFriction.oneMinus());
-//         // Update position based on velocity and time.
-//         pos.addAssign(vel.mul(dt));
-//         // Subtract lifetime.
-//         life.subAssign(dt);
-//       });
-//     })().compute(particleCount);
+        const noiseInput = hash(instanceIndex.toVar().mul(10));
+        const noise = mx_noise_float(noiseInput).mul(4);
 
-//     // Spawn function: only reset particles that are dead.
-//     const spawnParticles = Fn(() => {
-//       const idx = instanceIndex; //spawnIndex.add(instanceIndex).mod(particleCount).toInt();
-//       const pos = particlePositions.element(idx).xyz;
-//       const life = particlePositions.element(idx).w;
-//       const vel = particleVelocities.element(idx).xyz;
+        const x = t.sub(noise).sub(xOffset);
+        const y = sin(t).add(noise);
+        const z = hash(instanceIndex)
+          .mul(zRange)
+          .sub(zRange / 2)
+          .add(noise.div(2));
 
-//       // Only spawn if the particle is dead (lifetime <= 0).
-//       If(life.lessThanEqual(0.0), () => {
-//         // Assign a random lifetime
-//         life.assign(mix(0.1, 1.0, hash(idx.add(2))));
+        // Compute x as the parameter t, and y as the sine of t scaled by the amplitude.
+        // You can leave z at 0 if you want a 2D sine wave.
+        const wavePos = vec3(x, y, z);
+        position.assign(wavePos);
 
-//         // Generate a random spherical direction.
-//         const rTheta = hash(idx).mul(PI2);
-//         const rPhi = hash(idx.add(1)).mul(PI);
-//         const rx = sin(rTheta).mul(cos(rPhi));
-//         const ry = sin(rTheta).mul(sin(rPhi));
-//         const rz = cos(rTheta);
-//         const rDir = vec3(rx, ry, rz);
+        const c = colorBuffer.element(instanceIndex);
+        const colorIndex = hash(instanceIndex.add(3)).mul(colourCount).floor();
+        const randomColor = colors.element(colorIndex);
+        c.assign(randomColor);
+      })().compute(particleCount);
 
-//         // Spawn at the origin and give an outward velocity.
-//         pos.assign(vec3(0.0));
-//         vel.assign(rDir.mul(5.0));
-//       });
-//     })().compute(spawnCount);
+      renderer.computeAsync(computeInit);
 
-//     return {
-//       key,
-//       positionNode,
-//       colorNode,
-//       rotationNode,
-//       // opacityNode,
-//       updateParticles,
-//       spawnParticles,
-//     };
-//   }, [
-//     amplitude,
-//     frequency,
-//     friction,
-//     diminish,
-//     lacunarity,
-//     octaves,
-//     particleCount,
-//     renderer,
-//     spawnCount,
-//   ]);
+      // Nodes for sprite node material
+      const positionNode = positionBuffer.toAttribute();
 
-//   const {
-//     spawnCount,
-//     octaves,
-//     lacunarity,
-//     diminish,
-//     frequency,
-//     amplitude,
-//     friction,
-//   } = useControls({
-//     spawnCount: { value: particleCount / 2, min: 0, max: particleCount },
-//   });
+      // const rotationNode = atan(
+      //   velocityBuffer.toAttribute().y,
+      //   velocityBuffer.toAttribute().x
+      // );
 
-//   useFrame(() => {
-//     // Update particle physics and spawn new ones as needed.
-//     renderer.compute(updateParticles);
-//   });
+      const colorNode = Fn(() => {
+        // Compute the distance from the center of the UV (0.5, 0.5)
+        const centeredUv = uv().distance(vec2(0.5)).toVar();
+        // const posZ = positionLocal.z;
+        const posZ = positionWorld.z;
 
-//   const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
+        // Mimic a "bokeh" effect by softening the edges of the circle at varying distances
+        // The Z position of particles ranges from -5 to 5
+        // We'll focus circles (sharp edges) at a range of 0 - 1.
+        const softness = select(
+          posZ.lessThan(0.0),
+          // Invert the mapping: at posZ = -5, smoothstep(-5,0,-5) returns 0, so 1 - 0 = 1 (fully soft);
+          // at posZ = 0, smoothstep(-5,0,0) returns 1, so 1 - 1 = 0 (sharp)
+          smoothstep(-5.0, 0.0, posZ).oneMinus(),
+          select(
+            posZ.greaterThan(1.0),
+            // For Z from 1 (sharp) to 5 (soft)
+            smoothstep(1.0, 5.0, posZ),
+            // For Z between 0 and 1, no softness (fully sharp)
+            0.0
+          )
+        );
+        // Define a sharp circle: a narrow transition (e.g., from 0.45 to 0.5)
+        const sharpCircle = smoothstep(0.49, 0.5, centeredUv).oneMinus();
+        // Define a soft circle: a wider transition (e.g., from 0.25 to 0.5)
+        const softCircle = smoothstep(0.0, 0.5, centeredUv).oneMinus();
+        // Blend between the two based on the softness factor
+        const circle = mix(sharpCircle, softCircle, softness);
 
-//   useLayoutEffect(() => {
-//     if (!instancedMeshRef.current) return;
-//     // Ensure the instance matrix updates dynamically.
-//     instancedMeshRef.current.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-//   }, []);
+        // Fade out in the background
+        const fadeOut = smoothstep(zRange / 2, 0.5, posZ).oneMinus();
+        const alpha = circle.mul(fadeOut).mul(0.5);
 
-//   return (
-//     <instancedMesh
-//       ref={instancedMeshRef}
-//       args={[undefined, undefined, particleCount]}
-//       frustumCulled={false}
-//     >
-//       <planeGeometry args={[0.1, 0.1]} />
-//       <spriteNodeMaterial
-//         key={key}
-//         positionNode={positionNode}
-//         colorNode={colorNode}
-//         rotationNode={rotationNode}
-//         blending={THREE.AdditiveBlending}
-//         // opacityNode={opacityNode}
-//         depthWrite={false}
-//         transparent={true}
-//       />
-//     </instancedMesh>
-//   );
-// };
+        const c = colorBuffer.element(instanceIndex);
 
-// export default PS5Loading;
+        return vec4(c, alpha);
+      })();
+
+      const scaleNode = Fn(() => {
+        const random = hash(instanceIndex.add(2));
+        const scale = mix(1.0, 2.0, random);
+        return vec2(scale);
+      })();
+
+      const key = colorNode.uuid;
+
+      const updateParticles = Fn(() => {
+        const pos = positionBuffer.element(instanceIndex);
+        const vel = velocityBuffer.element(instanceIndex).xyz;
+        const dt = deltaTime.mul(0.1);
+        // const localVel = mx_noise_vec3(pos);
+        // Update velocity with turbulence.
+        // vel.addAssign(localVel);
+        // Update position based on velocity and time.
+        pos.addAssign(vel.mul(dt));
+      })().compute(particleCount);
+
+      return {
+        key,
+        positionNode,
+        colorNode,
+        scaleNode,
+        updateParticles,
+      };
+    }, [renderer]);
+
+  useFrame(() => {
+    // renderer.compute(updateParticles);
+  });
+
+  return (
+    <instancedMesh
+      args={[undefined, undefined, particleCount]}
+      frustumCulled={false}
+      position={[0, -1.5, 0]}
+      rotation={[0, 0.2, Math.PI / 12]}
+    >
+      <planeGeometry args={[0.1, 0.1]} />
+      <spriteNodeMaterial
+        key={key}
+        positionNode={positionNode}
+        colorNode={colorNode}
+        scaleNode={scaleNode}
+        // rotationNode={rotationNode}
+        // blending={THREE.AdditiveBlending}
+        depthWrite={false}
+        transparent={true}
+      />
+    </instancedMesh>
+  );
+};
+
+export default PS5Loading;

@@ -1,6 +1,11 @@
 "use client";
 import { OrbitControls, Stats } from "@react-three/drei";
-import { Canvas, extend, type ThreeToJSXElements } from "@react-three/fiber";
+import {
+  CameraProps,
+  Canvas,
+  extend,
+  type ThreeToJSXElements,
+} from "@react-three/fiber";
 import React, { type FC, type PropsWithChildren } from "react";
 import WebGPU from "three/examples/jsm/capabilities/WebGPU.js";
 import { type WebGPURendererParameters } from "three/src/renderers/webgpu/WebGPURenderer.js";
@@ -16,15 +21,19 @@ extend(THREE as any);
 
 type Props = PropsWithChildren<{
   isMobile?: boolean;
+  cameraProps?: CameraProps;
 }>;
 
-const WebGPUCanvas: FC<Props> = ({ children }) => {
-  if (!WebGPU.isAvailable()) return null;
+const WebGPUCanvas: FC<Props> = ({
+  children,
+  cameraProps = { position: [0, 0, 5], far: 20, fov: 70 },
+}) => {
+  if (!WebGPU.isAvailable()) return <div />;
   return (
     <Canvas
       className="!fixed inset-0"
       performance={{ min: 0.5, debounce: 300 }}
-      camera={{ position: [0, 0, 5], far: 20 }}
+      camera={cameraProps}
       gl={async (props) => {
         console.warn("WebGPU is supported");
         const renderer = new THREE.WebGPURenderer(
