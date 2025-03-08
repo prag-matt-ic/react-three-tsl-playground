@@ -1,6 +1,8 @@
 "use client";
+import { useGSAP } from "@gsap/react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { colorsFromRange, css } from "@thi.ng/color";
+import gsap from "gsap";
 import { useControls } from "leva";
 import React, { type FC, useLayoutEffect, useMemo } from "react";
 import { mx_noise_vec3, smoothstep } from "three/src/nodes/TSL.js";
@@ -36,6 +38,8 @@ import {
 } from "three/tsl";
 import { WebGPURenderer } from "three/webgpu";
 
+import usePS5Store, { Stage } from "./usePS5Store";
+
 // Work on re-creating the PS5 Loading screen: https://www.youtube.com/watch?v=bMxgJbCgPQQ
 
 const colourCount = 100;
@@ -60,7 +64,7 @@ const rangeColors = [
 
 const colors = array(rangeColors.map((c) => color(css(c))));
 
-const particleCount = Math.pow(40, 2);
+const particleCount = Math.pow(64, 2);
 
 // Setup buffers
 // Set initial positions
@@ -70,6 +74,12 @@ const particleCount = Math.pow(40, 2);
 
 const PS5Particles: FC = () => {
   const renderer = useThree((s) => s.gl) as unknown as WebGPURenderer;
+  const viewport = useThree((s) => s.viewport);
+
+  const stage = usePS5Store((s) => s.stage);
+  const setStage = usePS5Store((s) => s.setStage);
+
+  // console.log("viewport", viewport.width, viewport.width / particleCount);
 
   const {
     key,
@@ -78,6 +88,7 @@ const PS5Particles: FC = () => {
     scaleNode,
     opacityNode,
     updatePositions,
+    uEnterValue,
   } = useMemo(() => {
     // Create storage buffers for positions (w holds random seed) and velocities.
     const seeds = new Float32Array(particleCount);
@@ -85,38 +96,65 @@ const PS5Particles: FC = () => {
       seeds[i] = Math.random();
     }
 
-    const seedBuffer = instancedArray(seeds, "float");
-    const positionBuffer = instancedArray(particleCount, "vec3");
-    const colorBuffer = instancedArray(particleCount, "vec3");
-
     // Initialize particle positions
     const xSpacing = 0.01;
     const waveLength = particleCount * xSpacing;
     const xOffset = waveLength / 2;
     const zRange = 12;
 
+    // spread across a box
+    const scatteredPositions = new Float32Array(particleCount * 3);
+    const width = waveLength;
+    const height = 10;
+    const depth = zRange;
+
+    for (let i = 0; i < particleCount; i++) {
+      const x = Math.random() * width - width / 2;
+      const y = Math.random() * height - height / 2;
+      const z = Math.random() * depth - depth / 2;
+      scatteredPositions.set([x, y, z], i * 3);
+      // scatteredPositions.set([0, 0, 0], i * 3);
+    }
+
+    const uEnterValue = uniform(float(0.0));
+
+    const seedBuffer = instancedArray(seeds, "float");
+    const initialPositionBuffer = instancedArray(scatteredPositions, "vec3");
+    const finalPositionBuffer = instancedArray(particleCount, "vec3");
+    const colorBuffer = instancedArray(particleCount, "vec3");
+
     const computeInit = Fn(() => {
       const seed = seedBuffer.element(instanceIndex);
-      // Initiate Position
-      const position = positionBuffer.element(instanceIndex);
+
+      // Calculation final position
+      const position = finalPositionBuffer.element(instanceIndex);
       // Use the instanceIndex to compute a parameter "t"
       // Multiply by a spacing factor (0.1 here) to spread out the points
       const t = float(instanceIndex.add(3)).mul(xSpacing);
 
-      const noiseInput = hash(instanceIndex.toVar().mul(10));
-      const noise = mx_noise_float(noiseInput).mul(4);
+      const noiseInputA = hash(instanceIndex.toVar().mul(10));
+      const noiseInputB = hash(instanceIndex.toVar().add(2).mul(10).add(1));
+      const noiseA = mx_noise_float(noiseInputA).toVar();
+      const noiseB = mx_noise_float(noiseInputB).toVar();
 
-      const x = t.sub(noise).sub(xOffset);
-      const y = sin(t).add(noise);
+      const x = t.sub(noiseA).sub(xOffset);
+      const y = sin(t).add(noiseA.mul(4));
       const z = hash(instanceIndex)
         .mul(zRange)
         .sub(zRange / 2)
-        .add(noise.div(2));
+        .add(noiseB.mul(2));
 
       // Compute x as the parameter t, and y as the sine of t scaled by the amplitude.
       // You can leave z at 0 if you want a 2D sine wave.
-      const wavePos = vec3(x, y, z);
-      position.assign(wavePos);
+      const wavePos = vec3(x, y, z).toVar();
+
+      // Randomly leave some of the particles at their initial position
+      const makeMoreRandom = seed.lessThan(0.3);
+      const randomPos = vec3(0.0, noiseA.sub(noiseB).mul(24), 0.0).add(wavePos);
+
+      const finalPosition = select(makeMoreRandom, randomPos, wavePos);
+
+      position.assign(finalPosition);
 
       // Initiate Colour
       const c = colorBuffer.element(instanceIndex);
@@ -128,22 +166,19 @@ const PS5Particles: FC = () => {
       );
 
       c.assign(randomColor);
-
-      // Initiate velocity (random)
-
-      // Generate a random spherical direction.
-      // const rTheta = hash(instanceIndex).mul(PI2);
-      // const rPhi = hash(instanceIndex.add(1)).mul(PI);
-      // const rx = sin(rTheta).mul(cos(rPhi));
-      // const ry = sin(rTheta).mul(sin(rPhi));
-      // const vel = vec3(rx, ry, 0.0);
-      // velocityBuffer.element(instanceIndex).assign(vel);
     })().compute(particleCount);
 
     renderer.computeAsync(computeInit);
 
     // Nodes for sprite node material
-    const positionNode = positionBuffer.toAttribute();
+    const positionNode = Fn(() => {
+      // const initialPosition = initialPositionBuffer.element(instanceIndex);
+      // const finalPosition = finalPositionBuffer.element(instanceIndex);
+      const finalPosition = finalPositionBuffer.toAttribute();
+      const initialPosition = initialPositionBuffer.toAttribute();
+      const position = mix(initialPosition, finalPosition, uEnterValue);
+      return position;
+    })();
 
     const colorNode = Fn(() => {
       // Compute the distance from the center of the UV (0.5, 0.5)
@@ -175,7 +210,7 @@ const PS5Particles: FC = () => {
       const circle = mix(sharpCircle, softCircle, softness);
 
       // Fade out in the background
-      const fadeOut = smoothstep(zRange / 2, 0.5, posZ).oneMinus();
+      const fadeOut = smoothstep(zRange / 2, zRange / 2 + 1, posZ).oneMinus();
       const alpha = circle.mul(fadeOut).mul(0.5);
 
       const c = colorBuffer.element(instanceIndex);
@@ -196,7 +231,10 @@ const PS5Particles: FC = () => {
         period,
         tCycle
       ).oneMinus();
+
       const flickerAlpha = fadeIn.mul(fadeOut);
+
+      // const finalOpacity = flickerAlpha.mul(uEnterValue);
       return flickerAlpha;
     })();
 
@@ -215,14 +253,20 @@ const PS5Particles: FC = () => {
     const key = colorNode.uuid;
 
     const updatePositions = Fn(() => {
+      // Slowly move the particles around
       const seed = seedBuffer.element(instanceIndex);
-      const position = positionBuffer.element(instanceIndex);
+      const finalPosition = finalPositionBuffer.element(instanceIndex);
+
       const s = seed.toVar().mul(2.0).min(1.0);
       const t = time.mul(0.3);
       const velX = mx_noise_float(s.add(t)).mul(0.003);
       const velY = mx_noise_float(sin(s.mul(t))).mul(0.003);
-      const velZ = mx_noise_float(position.add(1)).mul(0.003);
-      position.addAssign(vec3(velX, velY, velZ));
+      const velZ = mx_noise_float(finalPosition.add(1)).mul(0.003);
+      finalPosition.addAssign(vec3(velX, velY, velZ));
+
+      // Move from the initial position to the final position over time
+      // const transitionValue = smoothstep(0.0, transitionInDuration, time);
+      // const initialPosition = initialPositionBuffer.element(instanceIndex);
     })().compute(particleCount);
 
     return {
@@ -232,8 +276,44 @@ const PS5Particles: FC = () => {
       scaleNode,
       opacityNode,
       updatePositions,
+      uEnterValue,
     };
   }, [renderer]);
+
+  useGSAP(
+    () => {
+      if (stage !== Stage.ENTER) return;
+      gsap.to(uEnterValue, {
+        value: 1.0,
+        duration: 1,
+        ease: "power2.in",
+        delay: 0.5,
+        onComplete: () => {
+          setStage(Stage.BRAND);
+        },
+      });
+    },
+    {
+      dependencies: [uEnterValue, stage],
+    }
+  );
+
+  useGSAP(
+    () => {
+      if (stage !== Stage.RESTART) return;
+      gsap.to(uEnterValue, {
+        value: 0.0,
+        duration: 1,
+        ease: "power2.out",
+        onComplete: () => {
+          setStage(Stage.ENTER);
+        },
+      });
+    },
+    {
+      dependencies: [uEnterValue, stage],
+    }
+  );
 
   useFrame(() => {
     renderer.compute(updatePositions);

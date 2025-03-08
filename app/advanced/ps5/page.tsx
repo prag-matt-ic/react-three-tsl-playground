@@ -7,6 +7,9 @@ import * as THREE from "three/webgpu";
 
 import PS5Backdrop from "@/components/advanced/ps5/PS5Backdrop";
 import PS5Particles from "@/components/advanced/ps5/PS5Particles";
+import PS5Lighting from "@/components/advanced/ps5/PS5Lighting";
+import PS5CameraControls from "@/components/advanced/ps5/PS5Camera";
+import PS5UI from "@/components/advanced/ps5/PS5UI";
 
 declare module "@react-three/fiber" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -16,14 +19,16 @@ declare module "@react-three/fiber" {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 extend(THREE as any);
 
+// References: https://www.youtube.com/watch?v=J5VKsqGAwjk
+
 export default function PS5LoadingPage() {
   return (
     <main className="h-lvh w-full">
       {WebGPU.isAvailable() && (
         <Canvas
           className="!fixed inset-0"
-          performance={{ min: 0.5, debounce: 300 }}
           camera={{ position: [0, 0, 8], fov: 110 }}
+          performance={{ min: 0.5, debounce: 300 }}
           gl={async (props) => {
             console.warn("WebGPU is supported");
             const renderer = new THREE.WebGPURenderer(
@@ -34,14 +39,18 @@ export default function PS5LoadingPage() {
           }}
         >
           <color attach="background" args={["#000210"]} />
-          <ambientLight intensity={8} />
-          {/* <pointLight position={[-1, -1, 0]} intensity={8} /> */}
+          <ambientLight intensity={6} />
+
           <PS5Backdrop />
           <PS5Particles />
-          <OrbitControls />
+          {/* <PS5Lighting /> */}
+          {/* <OrbitControls /> */}
+          <PS5CameraControls />
+
           {process.env.NODE_ENV === "development" && <Stats />}
         </Canvas>
       )}
+      <PS5UI />
     </main>
   );
 }
