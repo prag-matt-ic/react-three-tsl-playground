@@ -9,8 +9,8 @@ import { MathUtils } from "three";
 const MIN_POLAR_ANGLE = MathUtils.degToRad(80);
 const MAX_POLAR_ANGLE = MathUtils.degToRad(100);
 
-const MIN_AZIMUTH_ANGLE = -Math.PI / 20;
-const MAX_AZIMUTH_ANGLE = Math.PI / 20;
+const MIN_AZIMUTH_ANGLE = -Math.PI / 24;
+const MAX_AZIMUTH_ANGLE = Math.PI / 24;
 
 const PS5CameraControls: FC = () => {
   const size = useThree((s) => s.size);

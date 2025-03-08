@@ -43,7 +43,7 @@ export default function PS5LoadingPage() {
 
           <PS5Backdrop />
           <PS5Particles />
-          {/* <PS5Lighting /> */}
+          <PS5Lighting />
           {/* <OrbitControls /> */}
           <PS5CameraControls />
 

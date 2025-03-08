@@ -29,66 +29,68 @@ const PS5Lighting: FC = () => {
   const camera = useThree((s) => s.camera);
   const scene = useThree((s) => s.scene);
   const light = useRef<DirectionalLight>(null);
-  const lightTarget = useRef<Object3D<Object3DEventMap>>(null);
 
   const postProcessing = useRef<PostProcessing>(undefined);
 
   useEffect(() => {
+    const setupLight = () => {
+      if (!scene || !light.current) return;
+      const targetObject = new Object3D();
+      targetObject.position.set(40, 8, 0);
+      scene.add(targetObject);
+      light.current.target = targetObject;
+    };
+
+    setupLight();
+  }, [scene]);
+
+  useEffect(() => {
     if (!renderer || !scene || !camera) return;
-
-    const targetObject = new Object3D();
-    targetObject.position.set(8, 5, 0);
-    scene.add(targetObject);
-    light.current!.target = targetObject;
-    light.current?.updateMatrixWorld();
-
     // shadowmaps are needed for this effect
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = PCFSoftShadowMap;
-
+    // renderer.shadowMap.enabled = true;
+    // renderer.shadowMap.type = PCFSoftShadowMap;
     const processing = new PostProcessing(renderer);
 
-    // Create post-processing setup with specific filters
-    const scenePass = pass(scene, camera);
+    const setupPostProcessing = () => {
+      // Create post-processing setup with specific filters
+      const scenePass = pass(scene, camera);
+      // Setup Multiple Render Targets (MRT)
+      scenePass.setMRT(
+        mrt({
+          output: output,
+          normal: transformedNormalView,
+          depth: depth,
+          emissive: emissive,
+        })
+      );
+      // Get texture nodes
+      const scenePassColor = scenePass.getTextureNode("output");
+      // const scenePassEmissive = scenePass.getTextureNode("emissive");
+      // Create bloom pass
+      const bloomPass = bloom(scenePassColor, 0.3);
+      processing.outputNode = scenePassColor.add(bloomPass);
+      postProcessing.current = processing;
+    };
 
-    // Setup Multiple Render Targets (MRT)
-    scenePass.setMRT(
-      mrt({
-        output: output,
-        normal: transformedNormalView,
-        metalness: metalness,
-        depth: depth,
-        emissive: emissive,
-      })
-    );
-
-    // Get texture nodes
-    const scenePassColor = scenePass.getTextureNode("output");
-    // const scenePassEmissive = scenePass.getTextureNode("emissive");
-
-    // Create bloom pass
-    const bloomPass = bloom(scenePassColor, 0.1);
-
-    processing.outputNode = scenePassColor.add(bloomPass);
-    postProcessing.current = processing;
+    setupPostProcessing();
 
     return () => {
       processing.dispose();
     };
   }, [renderer, scene, camera]);
 
-  useFrame(({ gl }) => {
-    if (!postProcessing.current) return;
-    gl.clear();
-    postProcessing.current.render();
-  }, 1);
+  // useFrame(({ gl }) => {
+  //   if (!postProcessing.current) return;
+  //   gl.clear();
+  //   postProcessing.current.render();
+  // }, 1);
 
   return (
     <>
       <directionalLight
         ref={light}
         position={[8, 20, 0]}
-        intensity={20}
+        intensity={16}
         castShadow={true}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}

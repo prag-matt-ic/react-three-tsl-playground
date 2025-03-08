@@ -19,7 +19,7 @@ const PS5Backdrop: FC = () => {
       floor={0.3} // Stretches the floor segment, 0.25 by default
       segments={20} // Mesh-resolution, 20 by default
       receiveShadow={true}
-      scale={[100, 32, 8]}
+      scale={[110, 40, 8]}
       position={[0, -viewport.height / 3, -1]}
     >
       <meshStandardNodeMaterial colorNode={colorNode} />

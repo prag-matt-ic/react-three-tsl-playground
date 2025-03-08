@@ -36,7 +36,7 @@ import {
   vec3,
   vec4,
 } from "three/tsl";
-import { WebGPURenderer } from "three/webgpu";
+import { AdditiveBlending, WebGPURenderer } from "three/webgpu";
 
 import usePS5Store, { Stage } from "./usePS5Store";
 
@@ -333,8 +333,7 @@ const PS5Particles: FC = () => {
         colorNode={colorNode}
         scaleNode={scaleNode}
         opacityNode={opacityNode}
-        // rotationNode={rotationNode}
-        // blending={THREE.AdditiveBlending}
+        blending={AdditiveBlending}
         depthWrite={false}
         transparent={true}
       />
