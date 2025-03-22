@@ -16,7 +16,6 @@ import {
   mix,
   mx_cell_noise_float,
   mx_fractal_noise_float,
-  mx_noise_float,
   positionGeometry,
   positionWorld,
   ShaderNodeObject,

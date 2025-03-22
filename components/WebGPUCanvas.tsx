@@ -6,10 +6,17 @@ import {
   extend,
   type ThreeToJSXElements,
 } from "@react-three/fiber";
-import React, { type FC, type PropsWithChildren } from "react";
+import React, {
+  type FC,
+  type PropsWithChildren,
+  useLayoutEffect,
+  useState,
+} from "react";
 import WebGPU from "three/examples/jsm/capabilities/WebGPU.js";
 import { type WebGPURendererParameters } from "three/src/renderers/webgpu/WebGPURenderer.js";
 import * as THREE from "three/webgpu";
+
+import NotSupported from "@/components/NotSupported";
 
 declare module "@react-three/fiber" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -28,12 +35,20 @@ const WebGPUCanvas: FC<Props> = ({
   children,
   cameraProps = { position: [0, 0, 5], far: 20, fov: 70 },
 }) => {
-  if (!WebGPU.isAvailable()) return <div />;
+  const [isSupported, setIsSupported] = useState<boolean | null>(null);
+
+  useLayoutEffect(() => {
+    setIsSupported(WebGPU.isAvailable());
+  }, []);
+
+  if (isSupported === null) return null;
+  if (!isSupported) return <NotSupported />;
   return (
     <Canvas
       className="!fixed inset-0"
       performance={{ min: 0.5, debounce: 300 }}
       camera={cameraProps}
+      flat={true}
       gl={async (props) => {
         console.warn("WebGPU is supported");
         const renderer = new THREE.WebGPURenderer(

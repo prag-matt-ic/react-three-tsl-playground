@@ -86,9 +86,12 @@ const SpriteEmitter: FC = () => {
     );
 
     // Nodes for sprite node material
+    // @ts-expect-error missing type
     const positionNode = particlePositions.toAttribute();
     const rotationNode = atan(
+      // @ts-expect-error missing type
       particleVelocities.toAttribute().y,
+      // @ts-expect-error missing type
       particleVelocities.toAttribute().x
     );
 
@@ -104,6 +107,7 @@ const SpriteEmitter: FC = () => {
       ).oneMinus();
       // Invert the gradient so that the center is 1.0 (fully opaque) and the edge is 0.0,
       // then use pow() to accentuate the falloff (2.0 is an example exponent).
+      // @ts-expect-error missing type
       const life = particlePositions.toAttribute().w;
       const alpha = circle.mul(life);
 
